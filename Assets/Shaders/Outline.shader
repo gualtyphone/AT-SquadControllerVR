@@ -5,8 +5,8 @@ Shader "Custom/Outline" {
 		_Alpha("Alpha", float) = 0
 		_Color("Color", Color) = (1,1,1,1)
 		_MainTex("Albedo (RGB)", 2D) = "white" {}
-		_OutlineColor("Outline Color", Color) = (0,0,0,1)
-		_Outline("Outline Width", Range(0.0, 1)) = .005
+		_OutlineColor("OutlineColor", Color) = (0,0,0,1)
+		_Outline("OutlineWidth", Range(0.0, 1)) = .005
 	}
 		CGINCLUDE
 #include "UnityCG.cginc"
@@ -47,7 +47,7 @@ Shader "Custom/Outline" {
 			Tags{ "LightMode" = "Always" }
 			Cull Off
 			ZWrite Off
-			ZTest Always
+			//ZTest Always
 			ColorMask RGB // alpha not used
 
 						  // you can choose what kind of blending mode you want for the outline
@@ -95,7 +95,7 @@ Shader "Custom/Outline" {
 			Tags{ "LightMode" = "Always" }
 			Cull Front
 			ZWrite Off
-			ZTest Always
+			//ZTest Always
 			ColorMask RGB
 
 			// you can choose what kind of blending mode you want for the outline
