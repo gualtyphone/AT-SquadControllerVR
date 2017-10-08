@@ -77,6 +77,41 @@ public class SquadMaster : Singleton<SquadMaster>{
 
     }
 
+    public Vector3 getCenterPoint(List<int> squadsIds)
+    {
+        int count = 0;
+        Vector3 point = new Vector3();
+        foreach (var id in squadsIds)
+        {
+            foreach (var squadMember in squads[id])
+            {
+                count++;
+                point += squadMember.transform.position;
+            }
+        }
+        if (count > 0)
+        { 
+            point /= count;
+        }
+        return point;
+    }
+
+    public Vector3 getCenterPoint(int id)
+    {
+        int count = 0;
+        Vector3 point = new Vector3();
+        foreach (var squadMember in squads[id])
+        {
+            count++;
+            point += squadMember.transform.position;
+        }
+        if (count > 0)
+        {
+            point /= count;
+        }
+        return point;
+    }
+
     public void setWaypoint(List<int> squadsIds, Vector3 pos)
     {
         foreach (int squad in squadsIds)
@@ -92,5 +127,14 @@ public class SquadMaster : Singleton<SquadMaster>{
     {
         return squads[id];
     }
-    
+
+    public List<SquadMember> getSquads()
+    {
+        List<SquadMember> members = new List<SquadMember>();
+        foreach (var squad in squads)
+        {
+            members.AddRange(squad.Value);
+        }
+        return members;
+    }
 }
