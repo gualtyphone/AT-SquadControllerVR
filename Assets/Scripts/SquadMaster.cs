@@ -7,7 +7,7 @@ public class SquadMaster : Singleton<SquadMaster>{
     protected SquadMaster() { }
 
     [SerializeField]
-    List<int> SquadIDs;
+    public List<int> SquadIDs;
     [SerializeField]
     Dictionary<int, List<SquadMember>> squads;
     [SerializeField]
@@ -118,7 +118,7 @@ public class SquadMaster : Singleton<SquadMaster>{
         {
             foreach (var member in squads[squad])
             {
-                member.destination = pos;
+                member.finalDestination = pos;
             }
         }
     }

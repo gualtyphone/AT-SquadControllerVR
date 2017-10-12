@@ -47,7 +47,7 @@ public class GesturesController : MonoBehaviour
     void Selection()
     {
         if (handLeft.handState == HandController.HandState.Pointing &&
-                        handRight.handState != HandController.HandState.Pointing)
+            handRight.handState != HandController.HandState.Pointing)
         {
             RaycastHit hitInfo;
             //int layerMask = 1 << 8;
@@ -55,6 +55,7 @@ public class GesturesController : MonoBehaviour
             //Debug.DrawRay(handLeft.indexPoint.position, handLeft.indexPoint.forward);
             if (Physics.Raycast(handLeft.indexPoint.position, handLeft.indexPoint.forward, out hitInfo/*, layerMask*/))
             {
+
                 if (hitInfo.collider.gameObject != lastPointed)
                 {
                     lastPointed = hitInfo.collider.gameObject;
