@@ -24,6 +24,7 @@ public class SquadMember : MonoBehaviour {
 
     //Stats
     //??? Role ???
+    public float timer = 0;
 
 
     //What to do needed info
@@ -59,7 +60,7 @@ public class SquadMember : MonoBehaviour {
         {
             Gizmos.color = new Color(coverSpots[i].cost/maxValue, 1.0f-(coverSpots[i].cost/maxValue), 0.0f);
             var coverPoint = this.coverSpots[i];
-            Gizmos.DrawSphere(coverPoint.pos, 0.1f);
+            Gizmos.DrawSphere(coverPoint.pos, 0.2f);
         }
 
     }
@@ -100,6 +101,18 @@ public class SquadMember : MonoBehaviour {
         //{
         //    agent.enabled = false;
         //}
+        GameObject threat = findClosestVisibleKnownThreat();
+       
+        timer += Time.deltaTime;
+         if (threat)
+        {
+            //transform.LookAt(threat.transform);
+            if (timer > 1.0f)
+            {
+                GetComponent<Character>().Shoot(threat.transform.position - transform.position);
+                timer = 0.0f;
+            }
+        }
 
 
         if (selected)
@@ -129,24 +142,82 @@ public class SquadMember : MonoBehaviour {
         {
             case SquadMemberAction.Attacking:
                 {
-                    //set the destination
-                    //stay with the squad
-                    //find cover form the point we're attacking
-                    Vector3 center = SquadMaster.Instance.getCenterPoint(squadID);
+                    Vector3 squadCenter = SquadMaster.Instance.getCenterPoint(squadID);
+                    float squadRadius = 5.0F; //to be changed based on squad members
+                    Vector3 attackDirection = interacting.transform.position - squadCenter;
+                    //Remove all covers outside squad range
+                    foreach (CoverSpot cover in coverSpots)
+                    {
+                        if (Vector3.Distance(cover.pos, squadCenter) > squadRadius)
+                        {
+                            cover.cost += 1000.0f;
+                            
+                        }
+                        else
+                        {
+                            cover.cost += Vector3.Distance(cover.pos, squadCenter);
+                            //Debug.DrawLine(transform.position, cover.pos, Color.green);
+                        }
+                    }
+
+                    //increase cost based on direction of cover
+                    increaseCoverCostOnDirection(transform.position, attackDirection);
+                    increaseCoverCostOnDistance(transform.position);
+                    evaluateDistanceFromSquadMembers();
+                    evaluatePointsOfInterest();
+
+                    Vector3 bestCover = getBestCoverSpot();
+                    if (Vector3.Distance(squadCenter + bestCover, interacting.transform.position) <= 0.8 * Vector3.Distance(squadCenter, interacting.transform.position))
+                    {
+                        currentDestination = bestCover;
+                    }
+                    else
+                    {
+                        //find uncovered position
+                        //currentDestination = transform.position + attackDirection.normalized;
+                    }
+
+                    float threatValueAtAttackSpot = 0.0f;
+                    Vector3 threatDirection = Vector3.zero;
+                    foreach (var poi in currentPois)
+                    {
+                        if (poi)
+                        {
+                            ThreatValue value = poi.GetComponent<ThreatValue>();
+                            //if no line of sigth
+                            LayerMask layerMask = 1 << 9;
+                            if (Physics.Raycast(poi.transform.position, (interacting.transform.position
+                                - poi.transform.position), (interacting.transform.position - poi.transform.position).magnitude, layerMask))
+                            {
+                                if (Vector3.Distance(poi.transform.position, interacting.transform.position) < value.radius)
+                                {
+                                    threatValueAtAttackSpot += value.value;
+                                    threatDirection += value.transform.position * value.value;
+                                }
+                            }
+                            else
+                            {
+                                //add the threat value * LOS multiplier
+                                threatValueAtAttackSpot += value.value * LineOfSightMultiplier;
+                                threatDirection += value.transform.position * (value.value * LineOfSightMultiplier);
+                            }
+                        }
+                    }
+                    threatDirection.Normalize();
+
+                    if (threatValueAtAttackSpot == 0.0f)
+                    {
+                        currentAction = SquadMemberAction.Defending;
+                    }
                 }
                 break;
             case SquadMemberAction.Cover:
                 {
-                    //Add based on distance from self
-                    foreach (var cover in coverSpots)
-                    {
-                        cover.cost += Vector3.Distance(transform.position, cover.pos);
-                    }
-
+                    //Find best cover
+                    increaseCoverCostOnDistance(transform.position);
                     evaluatePointsOfInterest();
-                    removeOccupiedCoverSpots();
+                    evaluateDistanceFromSquadMembers();
                     Vector3 best = getBestCoverSpot();
-
                     NavMeshHit hit;
                     if (NavMesh.SamplePosition(best, out hit, 1.0f, NavMesh.AllAreas))
                         currentDestination = hit.position;
@@ -154,7 +225,7 @@ public class SquadMember : MonoBehaviour {
                 break;
             case SquadMemberAction.Defending:
                 {
-                    //Add based on distance from defendingPoint
+                    //Follow and assemble to defend the objective
                     int count = 0;
                     Vector3 point = Vector3.zero;
                     foreach (var squadMember in SquadMaster.Instance.getSquad(squadID))
@@ -180,43 +251,35 @@ public class SquadMember : MonoBehaviour {
                     Vector3 bestPos = interacting.transform.position + bestDirFromDefenseSpot;
                     Debug.DrawLine(bestPos, transform.position);
 
-
-                    foreach (var cover in coverSpots)
-                    {
-                        cover.cost += 10.0f * Vector3.Distance(interacting.transform.position, cover.pos);
-                    }
-                    foreach (var cover in coverSpots)
-                    {
-                        cover.cost += 10.0f * Vector3.Distance(bestPos, cover.pos);
-                    }
-
+                    increaseCoverCostOnDistance(interacting.transform.position);
+                    increaseCoverCostOnDistance(bestPos);
                     evaluatePointsOfInterest();
-                    removeOccupiedCoverSpots();
-                    //findOptimalDefendingPosition
-                    //dist from center of squad
-                    
+                    evaluateDistanceFromSquadMembers();
 
                     float threatValueAtDefendSpot = 0.0f;
                     Vector3 threatDirection = Vector3.zero;
                     foreach (var poi in currentPois)
                     {
-                        ThreatValue value = poi.GetComponent<ThreatValue>();
-                        //if no line of sigth
-                        LayerMask layerMask = 1 << 9;
-                        if (Physics.Raycast(poi.transform.position, (interacting.transform.position
-                            - poi.transform.position), (interacting.transform.position - poi.transform.position).magnitude, layerMask))
+                        if (poi)
                         {
-                            if (Vector3.Distance(poi.transform.position, interacting.transform.position) < value.radius)
+                            ThreatValue value = poi.GetComponent<ThreatValue>();
+                            //if no line of sigth
+                            LayerMask layerMask = 1 << 9;
+                            if (Physics.Raycast(poi.transform.position, (interacting.transform.position
+                                - poi.transform.position), (interacting.transform.position - poi.transform.position).magnitude, layerMask))
                             {
-                                threatValueAtDefendSpot += value.value;
-                                threatDirection += value.transform.position * value.value;
+                                if (Vector3.Distance(poi.transform.position, interacting.transform.position) < value.radius)
+                                {
+                                    threatValueAtDefendSpot += value.value;
+                                    threatDirection += value.transform.position * value.value;
+                                }
                             }
-                        }
-                        else
-                        {
-                            //add the threat value * LOS multiplier
-                            threatValueAtDefendSpot += value.value * LineOfSightMultiplier;
-                            threatDirection += value.transform.position * (value.value * LineOfSightMultiplier);
+                            else
+                            {
+                                //add the threat value * LOS multiplier
+                                threatValueAtDefendSpot += value.value * LineOfSightMultiplier;
+                                threatDirection += value.transform.position * (value.value * LineOfSightMultiplier);
+                            }
                         }
                     }
                     threatDirection.Normalize();
@@ -237,7 +300,7 @@ public class SquadMember : MonoBehaviour {
 
                     Vector3 bestCover = getBestCoverSpot();
 
-
+                    //
                     if (Vector3.Distance(bestCover, bestPos) < 4.0f)
                     {
                         bestPos = bestCover;
@@ -245,7 +308,7 @@ public class SquadMember : MonoBehaviour {
 
 
                     NavMeshHit hit;
-                    if (NavMesh.SamplePosition(bestPos, out hit, 1.0f, NavMesh.AllAreas))
+                    if (NavMesh.SamplePosition(bestPos, out hit, Mathf.Infinity, NavMesh.AllAreas))
                         currentDestination = hit.position;
 
 
@@ -322,7 +385,7 @@ public class SquadMember : MonoBehaviour {
         }
         return best;
     }
-    private void removeOccupiedCoverSpots()
+    private void evaluateDistanceFromSquadMembers()
     {
         foreach (var member in SquadMaster.Instance.getSquads())
         {
@@ -331,6 +394,7 @@ public class SquadMember : MonoBehaviour {
                 foreach (var cover in coverSpots)
                 {
                     cover.cost += 100.0f / Vector3.Distance(member.transform.position, cover.pos);
+                    cover.cost += 100.0f / Vector3.Distance(member.currentDestination, cover.pos);
                 }
             }
         }
@@ -343,30 +407,80 @@ public class SquadMember : MonoBehaviour {
             foreach (var cover in coverSpots)
             {
                 //if it's a threat
-                ThreatValue value = poi.GetComponent<ThreatValue>();
-                if (value)
+                if (poi)
                 {
-
-                    //if no line of sigth
-                    LayerMask layerMask = 1 << 9;
-                    if (Physics.Raycast(poi.transform.position, (cover.pos - poi.transform.position), (cover.pos - poi.transform.position).magnitude, layerMask))
+                    ThreatValue value = poi.GetComponent<ThreatValue>();
+                    if (value)
                     {
-                        //Debug.DrawRay(poi.transform.position, (cover.pos - poi.transform.position), Color.blue, 0.01f);
-                        if (Vector3.Distance(poi.transform.position, cover.pos) < value.radius)
+
+                        //if no line of sigth
+                        LayerMask layerMask = 1 << 9;
+                        if (Physics.Raycast(poi.transform.position, (cover.pos - poi.transform.position), (cover.pos - poi.transform.position).magnitude, layerMask))
                         {
-                            cover.cost += value.value;
+                            //Debug.DrawRay(poi.transform.position, (cover.pos - poi.transform.position), Color.blue, 0.01f);
+                            if (Vector3.Distance(poi.transform.position, cover.pos) < value.radius)
+                            {
+                                cover.cost += value.value;
+                            }
                         }
-                    }
-                    else
-                    {
-                        //Debug.DrawRay(poi.transform.position, (cover.pos - poi.transform.position), Color.red, 0.01f);
-                        //add the threat value * LOS multiplier
-                        cover.cost += value.value * LineOfSightMultiplier;
-                    }
+                        else
+                        {
+                            //Debug.DrawRay(poi.transform.position, (cover.pos - poi.transform.position), Color.red, 0.01f);
+                            //add the threat value * LOS multiplier
+                            cover.cost += value.value * LineOfSightMultiplier;
+                        }
 
+                    }
                 }
             }
         }
+    }
+    private void increaseCoverCostOnDistance(Vector3 pos)
+    {
+        foreach (var cover in coverSpots)
+        {
+            cover.cost += 10.0f * Vector3.Distance(pos, cover.pos);
+        }
+    }
+    private void increaseCoverCostOnDirection(Vector3 pos, Vector3 direction)
+    {
+        foreach (var cover in coverSpots)
+        {
+            if (LookingAt.IsLookingAt(pos, direction, cover.pos, 0.5f))
+            { 
+                cover.cost -= 10.0f * Vector3.Distance(pos, cover.pos);
+                //Debug.DrawRay(cover.pos, direction, Color.blue);
+            }
+            else
+            {
+                cover.cost += 10.0f * Vector3.Distance(pos, cover.pos);
+                
+            }
+        }
+    }
+
+    private GameObject findClosestVisibleKnownThreat()
+    {
+        GameObject closestVisibleKnownThreat = null;
+        float minDist = 100000.0f;
+        foreach (var threat in currentPois)
+        {
+            if (threat)
+            {
+                LayerMask layerMask = 1 << 9;
+                if (!Physics.Raycast(transform.position, threat.transform.position, (transform.position - threat.transform.position).magnitude, layerMask))
+                {
+                    float dist = Vector3.Distance(transform.position, threat.transform.position);
+                    if (dist < minDist)
+                    {
+                        minDist = dist;
+                        closestVisibleKnownThreat = threat;
+                    }
+                }
+            }
+        }
+
+        return closestVisibleKnownThreat;
     }
 
     public void UpdateSquad(int id, Color col)

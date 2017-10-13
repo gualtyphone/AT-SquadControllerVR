@@ -11,6 +11,9 @@ public class Enemy : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+
+
+
         timer += Time.deltaTime;
         foreach (SquadMember member in SquadMaster.Instance.getSquads())
         {
