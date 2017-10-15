@@ -9,19 +9,21 @@ public class HandController : MonoBehaviour {
     private Animator m_animation;
     public VRTK_ControllerEvents m_handEvent;
     public VRTK_InteractGrab m_handGrabEvent;
-    
+
     //HandStatus
-    public bool TriggerPressed;
-    public bool GripPressed;
-    public bool ButtonAPressed;
-    public bool ButtonBPressed;
-    public bool MenuButtonPressed;
-    public bool TouchpadPressed;
+    public HandButtonsState handButtonsState;
     private GameObject grabbed;
+
+    public List<Vector3> lastPositions;
+    public List<Quaternion> lastRotations;
 
     private void Start()
     {
         m_animation = GetComponent<Animator>();
+        lastPositions = new List<Vector3>();
+        lastPositions.Add(transform.position);
+        lastRotations = new List<Quaternion>();
+        lastRotations.Add(transform.rotation);
         m_animation.SetTrigger(Natural);
         SetupEvents();
     }
@@ -30,7 +32,9 @@ public class HandController : MonoBehaviour {
     private void Update()
     {
         AnimateHand();
+        SaveHandPosition();
         CalculateHandState();
+
     }
 
     //-----------------------------------------------
@@ -50,17 +54,34 @@ public class HandController : MonoBehaviour {
     public HandState handState;
     public Transform indexPoint;
 
+    private void SaveHandPosition()
+    {
+        float threshold = 0.01f;
+        if (Vector3.Distance(transform.position, lastPositions[lastPositions.Count-1]) > threshold ||
+            Vector3.Distance(transform.rotation.eulerAngles, lastRotations[lastRotations.Count-1].eulerAngles) > threshold)
+        {
+            lastPositions.Add(transform.position);
+            lastRotations.Add(transform.rotation);
+            if (lastPositions.Count > 200)
+            {
+                lastPositions.RemoveAt(0);
+                lastRotations.RemoveAt(0);
+                //lastPositions.TrimExcess();
+            }
+        }
+    }
+
     void CalculateHandState()
     {
-        if (TriggerPressed && GripPressed && (ButtonAPressed || ButtonBPressed || TouchpadPressed))
+        if (handButtonsState.TriggerPressed && handButtonsState.GripPressed && (handButtonsState.ButtonAPressed || handButtonsState.ButtonBPressed || handButtonsState.TouchpadPressed))
         {
             handState = HandState.Fist;
         }
-        else if (!TriggerPressed && !GripPressed && (ButtonAPressed || ButtonBPressed || TouchpadPressed))
+        else if (!handButtonsState.TriggerPressed && !handButtonsState.GripPressed && (handButtonsState.ButtonAPressed || handButtonsState.ButtonBPressed || handButtonsState.TouchpadPressed))
         {
             handState = HandState.FourFingers;
         }
-        else if (TriggerPressed && GripPressed)
+        else if (handButtonsState.TriggerPressed && handButtonsState.GripPressed)
         {
             if (grabbed == null)
             {
@@ -71,7 +92,7 @@ public class HandController : MonoBehaviour {
                 handState = HandState.TBI;
             }
         }
-        else if (GripPressed)
+        else if (handButtonsState.GripPressed)
         {
             if (grabbed == null)
             {
@@ -82,7 +103,7 @@ public class HandController : MonoBehaviour {
                 handState = HandState.TBI;
             }
         }
-        else if (TriggerPressed)
+        else if (handButtonsState.TriggerPressed)
         {
             handState = HandState.TBI;
         }
@@ -123,15 +144,15 @@ public class HandController : MonoBehaviour {
     private void AnimateHand()
     {
         grabbed = m_handGrabEvent.GetGrabbedObject();
-        if (TriggerPressed && GripPressed && (ButtonAPressed || ButtonBPressed || TouchpadPressed))
+        if (handButtonsState.TriggerPressed && handButtonsState.GripPressed && (handButtonsState.ButtonAPressed || handButtonsState.ButtonBPressed || handButtonsState.TouchpadPressed))
         {
             m_animation.SetTrigger(Fist);
         }
-        else if (!TriggerPressed && !GripPressed && (ButtonAPressed || ButtonBPressed || TouchpadPressed))
+        else if (!handButtonsState.TriggerPressed && !handButtonsState.GripPressed && (handButtonsState.ButtonAPressed || handButtonsState.ButtonBPressed || handButtonsState.TouchpadPressed))
         {
             m_animation.SetTrigger(Number4);
         }
-        else if (TriggerPressed && GripPressed)
+        else if (handButtonsState.TriggerPressed && handButtonsState.GripPressed)
         {
             if (grabbed == null)
             {
@@ -146,7 +167,7 @@ public class HandController : MonoBehaviour {
                 m_animation.SetTrigger(GrabSmall);
             }
         }
-        else if (GripPressed)
+        else if (handButtonsState.GripPressed)
         {
             if (grabbed == null)
             {
@@ -161,7 +182,7 @@ public class HandController : MonoBehaviour {
                 m_animation.SetTrigger(GrabLarge);
             }
         }
-        else if (TriggerPressed)
+        else if (handButtonsState.TriggerPressed)
         {
             m_animation.SetTrigger(Number3);
         }
@@ -205,60 +226,60 @@ public class HandController : MonoBehaviour {
 
     private void DoTriggerPressed(object sender, VRTK.ControllerInteractionEventArgs e)
     {
-        TriggerPressed = true;
+        handButtonsState.TriggerPressed = true;
         AnimateHand();
     }
     private void DoTriggerReleased(object sender, VRTK.ControllerInteractionEventArgs e)
     {
-        TriggerPressed = false;
+        handButtonsState.TriggerPressed = false;
         AnimateHand();
 
     }
     private void DoButtonAPressed(object sender, VRTK.ControllerInteractionEventArgs e)
     {
-        ButtonAPressed = true;
+        handButtonsState.ButtonAPressed = true;
         AnimateHand();
 
     }
     private void DoButtonAReleased(object sender, VRTK.ControllerInteractionEventArgs e)
     {
-        ButtonAPressed = false;
+        handButtonsState.ButtonAPressed = false;
         AnimateHand();
 
     }
     private void DoButtonBPressed(object sender, VRTK.ControllerInteractionEventArgs e)
     {
-        ButtonBPressed = true;
+        handButtonsState.ButtonBPressed = true;
         AnimateHand();
 
     }
     private void DoButtonBReleased(object sender, VRTK.ControllerInteractionEventArgs e)
     {
-        ButtonBPressed = false;
+        handButtonsState.ButtonBPressed = false;
         AnimateHand();
 
     }
     private void DoGripPressed(object sender, VRTK.ControllerInteractionEventArgs e)
     {
-        GripPressed = true;
+        handButtonsState.GripPressed = true;
         AnimateHand();
 
     }
     private void DoGripReleased(object sender, VRTK.ControllerInteractionEventArgs e)
     {
-        GripPressed = false;
+        handButtonsState.GripPressed = false;
         AnimateHand();
 
     }
     private void DoTouchPadPressed(object sender, VRTK.ControllerInteractionEventArgs e)
     {
-        TouchpadPressed = true;
+        handButtonsState.TouchpadPressed = true;
         AnimateHand();
 
     }
     private void DoTouchPadReleased(object sender, VRTK.ControllerInteractionEventArgs e)
     {
-        TouchpadPressed = false;
+        handButtonsState.TouchpadPressed = false;
         AnimateHand();
 
     }

@@ -77,6 +77,28 @@ public class SquadMaster : Singleton<SquadMaster>{
 
     }
 
+    public void setSquadAction(SquadMemberAction action)
+    {
+        foreach (SquadMember member in FindObjectsOfType<SquadMember>())
+        {
+           if (member.selected)
+           {
+               member.currentAction = action;
+           }
+        }
+    }
+
+    public void setSquadAction(int action)
+    {
+        foreach (SquadMember member in FindObjectsOfType<SquadMember>())
+        {
+            if (member.selected)
+            {
+                member.currentAction = (SquadMemberAction)action;
+            }
+        }
+    }
+
     public Vector3 getCenterPoint(List<int> squadsIds)
     {
         int count = 0;

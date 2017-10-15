@@ -18,8 +18,7 @@ public class Character : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		
-	}
+    }
 
     public void Damage(float damageValue)
     {
@@ -34,7 +33,7 @@ public class Character : MonoBehaviour {
     {
         //play sound
         //muzzle particle
-        //line bullet thingy
+        
         RaycastHit hitInfo;
         if(Physics.Raycast(gunPoint.transform.position, direction, out hitInfo))
         {
@@ -42,7 +41,19 @@ public class Character : MonoBehaviour {
             if (character)
             {
                 character.Damage(damageValue);
+                //line bullet thingy
+                gunPoint.GetComponent<LineRenderer>().SetPosition(0, gunPoint.position);
+                gunPoint.GetComponent<LineRenderer>().SetPosition(1, character.transform.position);
+                gunPoint.GetComponent<LineRenderer>().enabled = true;
+                StartCoroutine(disableLineRenderer());
             }
         }
+    }
+
+    IEnumerator disableLineRenderer()
+    {
+        yield return new WaitForSeconds(0.1f);
+        gunPoint.GetComponent<LineRenderer>().enabled = false;
+        yield return null;
     }
 }

@@ -2,12 +2,20 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UI;
+
+
 
 public class GesturesController : MonoBehaviour
 {
 
     public HandController handLeft;
     public HandController handRight;
+
+    public List<Gesture> gestures;
+    public bool gestureFound = false;
+
+    public Text headsetCanvasText;
 
     public enum Action
     {
@@ -31,6 +39,24 @@ public class GesturesController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (gestureFound)
+        {
+            handLeft.lastPositions.RemoveRange(0, handLeft.lastPositions.Count);
+            handLeft.lastPositions.Add(handLeft.transform.position);
+            handLeft.lastRotations.RemoveRange(0, handLeft.lastRotations.Count);
+            handLeft.lastRotations.Add(handLeft.transform.rotation);
+
+            handRight.lastPositions.RemoveRange(0, handRight.lastPositions.Count);
+            handRight.lastPositions.Add(handRight.transform.position);
+            handRight.lastRotations.RemoveRange(0, handRight.lastRotations.Count);
+            handRight.lastRotations.Add(handRight.transform.rotation);
+            gestureFound = false;
+        }
+        else
+        {
+            DrawDebugGestures();
+            CompareGestures();
+        }
         if (currentAction == Action.SelectingMembers)
         {
             Selection();
@@ -42,6 +68,87 @@ public class GesturesController : MonoBehaviour
             Moving();
         }
         
+    }
+
+    bool drawing = false;
+    Vector3 startPos;
+    Quaternion startRot;
+    void DrawDebugGestures()
+    {
+        foreach (Gesture gest in gestures)
+        {
+            if (!handRight.handButtonsState.TriggerPressed)
+            {
+                drawing = false;
+                startPos = handRight.transform.position;
+                startRot = handRight.transform.rotation;
+                gest.Draw(startPos, startRot);
+            }
+            else
+            {
+                drawing = true;
+                gest.Draw(startPos, startRot);
+            }
+        }
+    }
+
+    void CompareGestures()
+    {
+        foreach (Gesture gesture in gestures)
+        {
+            if (gesture.needLeftButtons)
+            {
+                bool found = false;
+                foreach(HandButtonsState hbs in gesture.PossibleLeftHands)
+                {
+                    if (hbs.equals(handLeft.handButtonsState))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    return;
+                }
+            }
+
+            if (gesture.needRightButtons)
+            {
+                bool found = false;
+                foreach (HandButtonsState hbs in gesture.PossibleRightHands)
+                {
+                    if (hbs.equals(handRight.handButtonsState))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    return;
+                }
+            }
+
+            if (gesture.needLeftMovement)
+            {
+                if (!Gesture.ConvalidateMovement(handLeft.lastPositions, handLeft.lastRotations, gesture.L_positions))
+                {
+                    return;
+                }
+            }
+            if (gesture.needRightMovement)
+            {
+                if (!Gesture.ConvalidateMovement(handRight.lastPositions,handRight.lastRotations, gesture.R_positions))
+                {
+                    return;
+                }
+            }
+
+            Debug.Log(gesture.Name);
+            gesture.OnGestureTrigger.Invoke();
+            gestureFound = true;
+        }
     }
 
     void Selection()
