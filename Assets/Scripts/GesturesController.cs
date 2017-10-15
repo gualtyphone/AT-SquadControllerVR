@@ -96,59 +96,82 @@ public class GesturesController : MonoBehaviour
     {
         foreach (Gesture gesture in gestures)
         {
-            if (gesture.needLeftButtons)
-            {
-                bool found = false;
-                foreach(HandButtonsState hbs in gesture.PossibleLeftHands)
-                {
-                    if (hbs.equals(handLeft.handButtonsState))
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                {
-                    return;
-                }
-            }
-
-            if (gesture.needRightButtons)
-            {
-                bool found = false;
-                foreach (HandButtonsState hbs in gesture.PossibleRightHands)
-                {
-                    if (hbs.equals(handRight.handButtonsState))
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                {
-                    return;
-                }
-            }
-
-            if (gesture.needLeftMovement)
-            {
-                if (!Gesture.ConvalidateMovement(handLeft.lastPositions, handLeft.lastRotations, gesture.L_positions))
-                {
-                    return;
-                }
-            }
-            if (gesture.needRightMovement)
-            {
-                if (!Gesture.ConvalidateMovement(handRight.lastPositions,handRight.lastRotations, gesture.R_positions))
-                {
-                    return;
-                }
-            }
-
-            Debug.Log(gesture.Name);
-            gesture.OnGestureTrigger.Invoke();
-            gestureFound = true;
+            tryGesture(gesture);
         }
+    }
+
+    void tryGesture(Gesture gesture)
+    {
+        if (gesture.needLeftButtons)
+        {
+            bool found = false;
+            foreach (HandButtonsState hbs in gesture.PossibleLeftHands)
+            {
+                if (hbs.equals(handLeft.handButtonsState))
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                return;
+            }
+        }
+
+        if (gesture.needRightButtons)
+        {
+            bool found = false;
+            foreach (HandButtonsState hbs in gesture.PossibleRightHands)
+            {
+                if (hbs.equals(handRight.handButtonsState))
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                return;
+            }
+        }
+
+        if (gesture.needLeftMovement)
+        {
+            if (!Gesture.ConvalidateMovement(handLeft.lastPositions, handLeft.lastRotations, gesture.L_positions))
+            {
+                return;
+            }
+        }
+        if (gesture.needRightMovement)
+        {
+            if (!Gesture.ConvalidateMovement(handRight.lastPositions, handRight.lastRotations, gesture.R_positions))
+            {
+                return;
+            }
+        }
+
+        Debug.Log(gesture.Name);
+        gesture.OnGestureTrigger.Invoke();
+        gestureFound = true;
+    }
+
+    public void selectAll()
+    {
+        bool found = false;
+        foreach(var squad in SquadMaster.Instance.SquadIDs)
+        {
+            if (!squadsSelected.Contains(squad))
+            {
+                found = true;
+                squadsSelected.Add(squad);
+            }
+        }
+        if (!found)
+        {
+            squadsSelected.RemoveRange(0, squadsSelected.Count);
+        }
+        SquadMaster.Instance.updateSelected(squadsSelected);
     }
 
     void Selection()
