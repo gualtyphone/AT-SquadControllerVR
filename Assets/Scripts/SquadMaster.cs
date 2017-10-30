@@ -9,18 +9,36 @@ public class SquadMaster : Singleton<SquadMaster>{
     [SerializeField]
     public List<int> SquadIDs;
     [SerializeField]
-    Dictionary<int, List<SquadMember>> squads;
+    Dictionary<int, List<NewSquadMember>> squads;
     [SerializeField]
     Dictionary<int, Color> squadColors;
 
     public void Awake()
     {
         SquadIDs = new List<int>();
-        squads = new Dictionary<int, List<SquadMember>>();
+        squads = new Dictionary<int, List<NewSquadMember>>();
         squadColors = new Dictionary<int, Color>();
     }
 
-	public int getUniqueID(SquadMember newSquadMember)
+    public void Update()
+    {
+        //cleanupSquads
+        if (squads != null)
+        {
+            foreach (var squad in squads)
+            {
+
+                squad.Value.RemoveAll(isNull);
+            }
+        }
+    }
+
+    private static bool isNull(NewSquadMember s)
+    {
+        return s == null;
+    }
+
+    public int getUniqueID(NewSquadMember newSquadMember)
     {
         bool found = true;
         int newID = 0;
@@ -38,7 +56,7 @@ public class SquadMaster : Singleton<SquadMaster>{
             }
         } while (!found);
         SquadIDs.Add(newID);
-        squads.Add(newID, new List<SquadMember>());
+        squads.Add(newID, new List<NewSquadMember>());
         squads[newID].Add(newSquadMember);
         squadColors.Add(newID, Random.ColorHSV(0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f));
         newSquadMember.squadColor = squadColors[newID];
@@ -49,18 +67,43 @@ public class SquadMaster : Singleton<SquadMaster>{
     {
         foreach(var squad in squads)
         {
-            foreach (SquadMember member in squad.Value)
+            foreach (NewSquadMember member in squad.Value)
             {
                 member.selected = ids.Contains(squad.Key);
             }
         }
     }
 
+    public void updateSelected(List<NewSquadMember> members)
+    {
+        foreach (NewSquadMember member in getSquads())
+        {
+            member.selected = members.Contains(member) ;
+        }
+        
+    }
+
+    public List<NewSquadMember> getSelectedMembers()
+    {
+        List<NewSquadMember> squadMembers = new List<NewSquadMember>();
+        foreach (var squad in squads)
+        {
+            foreach (NewSquadMember member in squad.Value)
+            {
+                if (member.selected)
+                {
+                    squadMembers.Add(member);
+                }
+            }
+        }
+        return squadMembers;
+    }
+
     public int mergeSquads(List<int> mergingSquads)
     {
         for (int i = 1; i < mergingSquads.Count; i++)
         {
-            foreach (SquadMember member in squads[mergingSquads[i]])
+            foreach (NewSquadMember member in squads[mergingSquads[i]])
             {
                 squads[mergingSquads[0]].Add(member);
                 member.UpdateSquad(mergingSquads[0], squadColors[mergingSquads[0]]);
@@ -72,32 +115,50 @@ public class SquadMaster : Singleton<SquadMaster>{
         return mergingSquads[0];
     }
 
+    public int mergeSquads(List<NewSquadMember> mergingSquads)
+    {
+        List<int> mergingIds = new List<int>();
+        foreach (var member in mergingSquads)
+        {
+            if (!mergingIds.Contains( member.squadID))
+            {
+                mergingIds.Add(member.squadID);
+            }
+        }
+
+        if (mergingIds.Count > 1)
+        {
+            return mergeSquads(mergingIds);
+        }
+        return mergingSquads[0].squadID;
+    }
+
     public void breakSquad(int squadID)
     {
 
     }
 
-    public void setSquadAction(SquadMemberAction action)
-    {
-        foreach (SquadMember member in FindObjectsOfType<SquadMember>())
-        {
-           if (member.selected)
-           {
-               member.currentAction = action;
-           }
-        }
-    }
+    //public void setSquadAction(SquadMemberAction action)
+    //{
+    //    foreach (NewSquadMember member in FindObjectsOfType<NewSquadMember>())
+    //    {
+    //       if (member.selected)
+    //       {
+    //           member.currentAction = action;
+    //       }
+    //    }
+    //}
 
-    public void setSquadAction(int action)
-    {
-        foreach (SquadMember member in FindObjectsOfType<SquadMember>())
-        {
-            if (member.selected)
-            {
-                member.currentAction = (SquadMemberAction)action;
-            }
-        }
-    }
+    //public void setSquadAction(int action)
+    //{
+    //    foreach (NewSquadMember member in FindObjectsOfType<NewSquadMember>())
+    //    {
+    //        if (member.selected)
+    //        {
+    //            member.currentAction = (SquadMemberAction)action;
+    //        }
+    //    }
+    //}
 
     public Vector3 getCenterPoint(List<int> squadsIds)
     {
@@ -134,25 +195,25 @@ public class SquadMaster : Singleton<SquadMaster>{
         return point;
     }
 
-    public void setWaypoint(List<int> squadsIds, Vector3 pos)
-    {
-        foreach (int squad in squadsIds)
-        {
-            foreach (var member in squads[squad])
-            {
-                member.finalDestination = pos;
-            }
-        }
-    }
+    //public void setWaypoint(List<int> squadsIds, Vector3 pos)
+    //{
+    //    foreach (int squad in squadsIds)
+    //    {
+    //        foreach (var member in squads[squad])
+    //        {
+    //            member.finalDestination = pos;
+    //        }
+    //    }
+    //}
 
-    public List<SquadMember> getSquad(int id)
+    public List<NewSquadMember> getSquad(int id)
     {
         return squads[id];
     }
 
-    public List<SquadMember> getSquads()
+    public List<NewSquadMember> getSquads()
     {
-        List<SquadMember> members = new List<SquadMember>();
+        List<NewSquadMember> members = new List<NewSquadMember>();
         foreach (var squad in squads)
         {
             members.AddRange(squad.Value);

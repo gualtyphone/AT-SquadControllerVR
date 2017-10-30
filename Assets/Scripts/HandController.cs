@@ -13,12 +13,14 @@ public class HandController : MonoBehaviour {
     //HandStatus
     public HandButtonsState handButtonsState;
     private GameObject grabbed;
-
+    
     public List<Vector3> lastPositions;
     public List<Quaternion> lastRotations;
+    private LineRenderer lineRenderer;
 
     private void Start()
     {
+        lineRenderer = GetComponent<LineRenderer>();
         m_animation = GetComponent<Animator>();
         lastPositions = new List<Vector3>();
         lastPositions.Add(transform.position);
@@ -31,10 +33,11 @@ public class HandController : MonoBehaviour {
 
     private void Update()
     {
-        AnimateHand();
+        //AnimateHand();
         SaveHandPosition();
         CalculateHandState();
-
+        lineRenderer.positionCount = lastPositions.Count;
+        lineRenderer.SetPositions(lastPositions.ToArray());
     }
 
     //-----------------------------------------------
@@ -56,13 +59,13 @@ public class HandController : MonoBehaviour {
 
     private void SaveHandPosition()
     {
-        float threshold = 0.01f;
-        if (Vector3.Distance(transform.position, lastPositions[lastPositions.Count-1]) > threshold ||
-            Vector3.Distance(transform.rotation.eulerAngles, lastRotations[lastRotations.Count-1].eulerAngles) > threshold)
+        float threshold = 0.05f;
+        if ((transform.position- lastPositions[lastPositions.Count-1]).sqrMagnitude > threshold ||
+            (transform.rotation.eulerAngles- lastRotations[lastRotations.Count-1].eulerAngles).sqrMagnitude > threshold)
         {
             lastPositions.Add(transform.position);
             lastRotations.Add(transform.rotation);
-            if (lastPositions.Count > 200)
+            if (lastPositions.Count > 100)
             {
                 lastPositions.RemoveAt(0);
                 lastRotations.RemoveAt(0);

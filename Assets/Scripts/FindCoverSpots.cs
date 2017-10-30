@@ -37,10 +37,10 @@ public class CoverSpot
     public float cost = 0;
 }
 
-[ExecuteInEditMode]
-public class FindCoverSpots : MonoBehaviour
+//[ExecuteInEditMode]
+public class FindCoverSpots : Singleton<FindCoverSpots>
 {
-    protected FindCoverSpots() { }
+    //protected FindCoverSpots() { }
 
     private List<LineSegment> borderEdges = null;
 
@@ -267,14 +267,14 @@ public class FindCoverSpots : MonoBehaviour
     private static List<Vector3> CleanCoverSpots(List<Vector3> covers)
     {
         
-        float minSpaceBetweenCovers = 0.4f;
+        float minSpaceBetweenCovers = 1.6f;
         for (int i = covers.Count - 1; i >= 0; i--)
         {
             for (int j = covers.Count - 1; j >= 0; j--)
             {
                 if (i != j)
                 {
-                    if (Vector3.Distance(covers[i], covers[j]) < minSpaceBetweenCovers)
+                    if ((covers[i] - covers[j]).sqrMagnitude < minSpaceBetweenCovers)
                     {
                         covers.RemoveAt(i);
                         //i--;
@@ -312,11 +312,11 @@ public class FindCoverSpots : MonoBehaviour
         List<Vector3> covers = coversList;
         Vector3 center = (segment.start + segment.end) / 2;
         covers.Add(center);
-        if (Vector3.Distance(center, segment.start) > minDistBetweenCovers)
+        if ((center - segment.start).sqrMagnitude > minDistBetweenCovers)
         {
             covers = addPointsAlongLine(covers, new LineSegment(center, segment.start), minDistBetweenCovers);
         }
-        if (Vector3.Distance(center, segment.end) > minDistBetweenCovers)
+        if ((center - segment.end).sqrMagnitude > minDistBetweenCovers)
         {
             covers = addPointsAlongLine(covers, new LineSegment(center, segment.end), minDistBetweenCovers);
         }

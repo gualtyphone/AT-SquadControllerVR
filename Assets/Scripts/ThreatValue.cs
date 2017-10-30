@@ -9,8 +9,6 @@ public class ThreatValue : MonoBehaviour {
 
         if (!this.enabled)
             return;
-
-
         Gizmos.color = new Color(1.0f, 0.0f, 0.0f, .6f);
         Gizmos.DrawSphere(transform.position, radius);
     }
@@ -19,4 +17,6 @@ public class ThreatValue : MonoBehaviour {
     public float value = 0.0f;
 
     public float radius = 0.0f;
+
+    public bool enemy = true;
 }
