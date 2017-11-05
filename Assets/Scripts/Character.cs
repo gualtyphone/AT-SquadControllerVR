@@ -19,6 +19,7 @@ public class Character : MonoBehaviour {
     public GameObject gunPoint;
     public GameObject hole;
     public GameObject muzzle;
+    public bool player;
 
     // Use this for initialization
     void Start () {
@@ -35,7 +36,14 @@ public class Character : MonoBehaviour {
         health -= damageValue;
         if (health <= 0.0f)
         {
-            Destroy(this.gameObject);
+            if (player)
+            {
+                Application.LoadLevel(1);
+            }
+            else
+            {
+                Destroy(this.gameObject);
+            }
         }
     }
 
@@ -60,6 +68,13 @@ public class Character : MonoBehaviour {
                         if (hit.rigidbody.GetComponent<Character>() != null)
                         {
                             hit.rigidbody.GetComponent<Character>().Damage(4.0f);
+                        }
+                    }
+                    else
+                    {
+                        if (hit.collider.GetComponent<Character>() != null)
+                        {
+                            hit.collider.GetComponent<Character>().Damage(10.0f);
                         }
                     }
 
